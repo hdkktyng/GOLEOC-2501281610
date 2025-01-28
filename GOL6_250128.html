@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game of Life</title>
+    <style>
+        canvas {
+            display: block;
+            margin: 0 auto;
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+        }
+        #controls {
+            text-align: center;
+            margin-top: 20px;
+        }
+        button {
+            margin: 5px;
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+        #rules {
+            display: flex;
+            flex-direction: column;
+            position: absolute;
+            top: 50px;
+            right: 20px;
+            background-color: #f9f9f9;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+        }
+        #rules > div {
+            margin-bottom: 15px;
+        }
+        #rules h3 {
+            margin: 0;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        #rules label {
+            display: block;
+            margin: 5px 0;
+        }
+        #densityControl {
+            text-align: center;
+            margin-top: 20px;
+        }
+        #densityControl label {
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h2 style="text-align: center;">Conway's Game of Life to Explore the Edge of Chaos</h2>
+    <canvas id="gameCanvas" width="600" height="600"></canvas>
+    <div id="controls">
+        <button id="startButton">Start</button>
+        <button id="pauseButton">Pause</button>
+        <button id="stepButton">Step</button>
+        <button id="resetButton">Reset</button>
+        <button id="randomButton">Random</button>
+    </div>
+    <div id="densityControl">
+        <label for="density">Random Density (%):</label>
+        <input type="number" id="density" min="0" max="100" value="30">
+    </div>
+    <div id="rules">
+        <div>
+            <h3>Survival</h3>
+            <label><input type="checkbox" id="survive0">0</label>
+            <label><input type="checkbox" id="survive1">1</label>
+            <label><input type="checkbox" id="survive2" checked>2</label>
+            <label><input type="checkbox" id="survive3" checked>3</label>
+            <label><input type="checkbox" id="survive4">4</label>
+            <label><input type="checkbox" id="survive5">5</label>
+            <label><input type="checkbox" id="survive6">6</label>
+            <label><input type="checkbox" id="survive7">7</label>
+            <label><input type="checkbox" id="survive8">8</label>
+        </div>
+        <div>
+            <h3>Birth</h3>
+            <label><input type="checkbox" id="birth0">0</label>
+            <label><input type="checkbox" id="birth1">1</label>
+            <label><input type="checkbox" id="birth2">2</label>
+            <label><input type="checkbox" id="birth3" checked>3</label>
+            <label><input type="checkbox" id="birth4">4</label>
+            <label><input type="checkbox" id="birth5">5</label>
+            <label><input type="checkbox" id="birth6">6</label>
+            <label><input type="checkbox" id="birth7">7</label>
+            <label><input type="checkbox" id="birth8">8</label>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        const cellSize = 10; // Size of each cell in pixels
+        const cols = canvas.width / cellSize;
+        const rows = canvas.height / cellSize;
+
+        let grid = createGrid(rows, cols);
+        let isRunning = false;
+        let animationFrame;
+
+        canvas.addEventListener("click", (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = Math.floor((e.clientX - rect.left) / cellSize);
+            const y = Math.floor((e.clientY - rect.top) / cellSize);
+
+            grid[y][x] = grid[y][x] === 1 ? 0 : 1;
+            drawGrid();
+        });
+
+        document.getElementById("startButton").addEventListener("click", () => {
+            if (!isRunning) {
+                isRunning = true;
+                gameLoop();
+            }
+        });
+
+        document.getElementById("pauseButton").addEventListener("click", () => {
+            isRunning = false;
+            cancelAnimationFrame(animationFrame);
+        });
+
+        document.getElementById("stepButton").addEventListener("click", () => {
+            if (!isRunning) {
+                updateGrid();
+                drawGrid();
+            }
+        });
+
+        document.getElementById("resetButton").addEventListener("click", () => {
+            isRunning = false;
+            cancelAnimationFrame(animationFrame);
+            grid = createGrid(rows, cols);
+            drawGrid();
+        });
+
+        document.getElementById("randomButton").addEventListener("click", () => {
+            const density = parseFloat(document.getElementById("density").value) / 100;
+            grid = createRandomGrid(rows, cols, density);
+            drawGrid();
+        });
+
+        function createGrid(rows, cols) {
+            return Array.from({ length: rows }, () => Array(cols).fill(0));
+        }
+
+        function createRandomGrid(rows, cols, density) {
+            return Array.from({ length: rows }, () => Array.from({ length: cols }, () => Math.random() < density ? 1 : 0));
+        }
+
+        function drawGrid() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let row = 0; row < rows; row++) {
+                for (let col = 0; col < cols; col++) {
+                    ctx.fillStyle = grid[row][col] === 1 ? "black" : "white";
+                    ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+                    ctx.strokeStyle = "#ccc";
+                    ctx.strokeRect(col * cellSize, row * cellSize, cellSize, cellSize);
+                }
+            }
+        }
+
+        function updateGrid() {
+            const newGrid = createGrid(rows, cols);
+
+            const surviveRules = Array.from({ length: 9 }, (_, i) => document.getElementById(`survive${i}`).checked);
+            const birthRules = Array.from({ length: 9 }, (_, i) => document.getElementById(`birth${i}`).checked);
+
+            for (let row = 0; row < rows; row++) {
+                for (let col = 0; col < cols; col++) {
+                    const neighbors = countNeighbors(grid, row, col);
+
+                    if (grid[row][col] === 1) {
+                        newGrid[row][col] = surviveRules[neighbors] ? 1 : 0;
+                    } else {
+                        newGrid[row][col] = birthRules[neighbors] ? 1 : 0;
+                    }
+                }
+            }
+
+            grid = newGrid;
+        }
+
+        function countNeighbors(grid, row, col) {
+            let count = 0;
+            for (let i = -1; i <= 1; i++) {
+                for (let j = -1; j <= 1; j++) {
+                    if (i === 0 && j === 0) continue;
+
+                    const x = row + i;
+                    const y = col + j;
+
+                    // Open boundary condition: out-of-bounds cells are always dead
+                    if (x >= 0 && x < rows && y >= 0 && y < cols) {
+                        count += grid[x][y];
+                    }
+                }
+            }
+            return count;
+        }
+
+        function gameLoop() {
+            drawGrid();
+            updateGrid();
+            animationFrame = requestAnimationFrame(gameLoop);
+        }
+
+        drawGrid();
+    </script>
+</body>
+</html>
