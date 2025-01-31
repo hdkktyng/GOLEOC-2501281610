@@ -12,7 +12,7 @@ This is an interactive implementation of Conway's Game of Life, designed to expl
 - Intuitive grid editing via mouse clicks.
 
 ## How to Use
-1. Download the `life_game.html` file.
+1. Download the `index.html` file.
 2. Open the file in any modern web browser (no installation required).
 3. Use the controls to adjust rules, set initial conditions, and run the simulation.
 4. To set the initial condition, click to change the black/white of the initial state of each cell or press the Random button.
